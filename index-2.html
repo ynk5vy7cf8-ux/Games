@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>游戏待办助手</title>
+<style>
+:root {
+--bg-dark: #0a0a0f;
+--bg-card: #161622;
+--bg-card-hover: #1e1e2e;
+--border: #2a2a3e;
+--text: #ffffff;
+--text-muted: #8888a0;
+--primary: #6366f1;
+--primary-light: #818cf8;
+--success: #22c55e;
+--warning: #f59e0b;
+--danger: #ef4444;
+--safe-top: env(safe-area-inset-top, 0px);
+--safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+background: var(--bg-dark);
+color: var(--text);
+min-height: 100vh;
+min-height: 100dvh;
+padding-top: var(--safe-top);
+padding-bottom: calc(var(--safe-bottom) + 80px);
+overflow-x: hidden;
+}
+.header {
+padding: 16px 20px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+position: sticky;
+top: 0;
+z-index: 100;
+background: rgba(10,10,15,0.95);
+backdrop-filter: blur(20px);
+border-bottom: 1px solid var(--border);
+}
+.header h1 { font-size: 20px; font-weight: 700; }
+.header .subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.header-actions { display: flex; gap: 8px; }
+.icon-btn {
+width: 36px; height: 36px;
+border-radius: 10px;
+border: none;
+background: var(--bg-card);
+color: var(--text);
+display: flex; align-items: center; justify-content: center;
+font-size: 18px;
+cursor: pointer;
+}
+.icon-btn:active { opacity: 0.6; }
+.stats {
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 10px;
+padding: 14px 20px;
+}
+.stat-card {
+background: var(--bg-card);
+border-radius: 14px;
+padding: 14px 10px;
+text-align: center;
+border: 1px solid var(--border);
+}
+.stat-card .num { font-size: 24px; font-weight: 800; }
+.stat-card .label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.search-bar {
+margin: 0 20px 14px;
+position: relative;
+}
+.search-bar input {
+width: 100%;
+padding: 12px 16px 12px 42px;
+border-radius: 12px;
+border: 1px solid var(--border);
+background: var(--bg-card);
+color: var(--text);
+font-size: 16px;
+outline: none;
+}
+.search-bar input::placeholder { color: var(--text-muted); }
+.search-bar .search-icon {
+position: absolute;
+left: 14px; top: 50%;
+transform: translateY(-50%);
+color: var(--text-muted);
+font-size: 16px;
+}
+.game-list {
+padding: 0 20px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+.game-card {
+background: var(--bg-card);
+border-radius: 16px;
+padding: 16px;
+display: flex;
+align-items: center;
+gap: 14px;
+border: 1px solid var(--border);
+cursor: pointer;
+transition: background 0.2s;
+}
+.game-card:active { background: var(--bg-card-hover); }
+.game-icon {
+width: 48px; height: 48px;
+border-radius: 12px;
+display: flex; align-items: center; justify-content: center;
+font-size: 24px;
+flex-shrink: 0;
+}
+.game-info { flex: 1; min-width: 0; }
+.game-name { font-size: 16px; font-weight: 600; }
+.game-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+.game-arrow { color: var(--text-muted); font-size: 18px; }
+.fab {
+position: fixed;
+bottom: calc(var(--safe-bottom) + 20px);
+right: 20px;
+width: 56px; height: 56px;
+border-radius: 16px;
+border: none;
+background: var(--primary);
+color: white;
+font-size: 24px;
+display: flex; align-items: center; justify-content: center;
+box-shadow: 0 4px 20px rgba(99,102,241,0.4);
+cursor: pointer;
+z-index: 200;
+}
+.fab:active { transform: scale(0.92); }
+.modal-overlay {
+position: fixed;
+inset: 0;
+background: rgba(0,0,0,0.6);
+z-index: 1000;
+display: flex;
+align-items: flex-end;
+justify-content: center;
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.25s;
+}
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.modal {
+background: var(--bg-dark);
+border-radius: 24px 24px 0 0;
+width: 100%;
+max-height: 85vh;
+overflow-y: auto;
+padding: 24px 20px;
+padding-bottom: calc(24px + var(--safe-bottom));
+transform: translateY(100%);
+transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.modal-overlay.active .modal { transform: translateY(0); }
+.modal-handle {
+width: 36px; height: 4px;
+border-radius: 2px;
+background: var(--border);
+margin: 0 auto 20px;
+}
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.modal-section-title { font-size: 13px; font-weight: 600; color: var(--text-muted); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted); }
+.form-group input, .form-group textarea, .form-group select {
+width: 100%;
+padding: 12px 14px;
+border-radius: 12px;
+border: 1px solid var(--border);
+background: var(--bg-card);
+color: var(--text);
+font-size: 16px;
+outline: none;
+font-family: inherit;
+}
+.form-group textarea { min-height: 100px; resize: vertical; }
+.form-group select { appearance: none; }
+.btn {
+padding: 14px 20px;
+border-radius: 12px;
+border: none;
+font-size: 15px;
+font-weight: 600;
+cursor: pointer;
+width: 100%;
+font-family: inherit;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:active { opacity: 0.8; }
+.btn-ghost { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:active { opacity: 0.7; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-row { display: flex; gap: 10px; margin-top: 16px; }
+.btn-row .btn { flex: 1; }
+.tabs {
+display: flex;
+gap: 6px;
+padding: 4px;
+background: var(--bg-card);
+border-radius: 12px;
+margin-bottom: 16px;
+}
+.tab {
+flex: 1;
+padding: 10px;
+text-align: center;
+border-radius: 8px;
+font-size: 13px;
+font-weight: 600;
+color: var(--text-muted);
+cursor: pointer;
+transition: all 0.2s;
+}
+.tab.active { background: var(--primary); color: white; }
+.todo-item {
+background: var(--bg-card);
+border-radius: 14px;
+padding: 14px 16px;
+margin-bottom: 8px;
+border: 1px solid var(--border);
+display: flex;
+align-items: flex-start;
+gap: 12px;
+}
+.todo-check {
+width: 24px; height: 24px;
+border-radius: 50%;
+border: 2px solid var(--border);
+display: flex; align-items: center; justify-content: center;
+flex-shrink: 0;
+margin-top: 2px;
+cursor: pointer;
+transition: all 0.2s;
+}
+.todo-check.done { background: var(--success); border-color: var(--success); }
+.todo-check.done::after { content: "✓"; color: white; font-size: 14px; font-weight: 700; }
+.todo-content { flex: 1; min-width: 0; }
+.todo-title { font-size: 15px; font-weight: 500; }
+.todo-title.done { text-decoration: line-through; color: var(--text-muted); }
+.todo-tags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.tag {
+font-size: 10px;
+padding: 3px 8px;
+border-radius: 6px;
+font-weight: 600;
+}
+.tag-daily { background: rgba(99,102,241,0.2); color: var(--primary-light); }
+.tag-weekly { background: rgba(34,197,94,0.2); color: var(--success); }
+.tag-once { background: rgba(248,113,113,0.2); color: var(--danger); }
+.tag-remind { background: rgba(245,158,11,0.2); color: var(--warning); }
+.tag-update { background: rgba(99,102,241,0.2); color: var(--primary-light); }
+.tag-bug { background: rgba(239,68,68,0.2); color: var(--danger); }
+.tag-event { background: rgba(34,197,94,0.2); color: var(--success); }
+.todo-delete { color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 0 4px; }
+.detail-header {
+padding: 12px 20px;
+display: flex;
+align-items: center;
+gap: 12px;
+position: sticky;
+top: 0;
+z-index: 100;
+background: rgba(10,10,15,0.95);
+backdrop-filter: blur(20px);
+border-bottom: 1px solid var(--border);
+}
+.back-btn {
+width: 36px; height: 36px;
+border-radius: 10px;
+border: none;
+background: var(--bg-card);
+color: var(--text);
+font-size: 20px;
+cursor: pointer;
+display: flex; align-items: center; justify-content: center;
+}
+.filter-chips { display: flex; gap: 8px; padding: 14px 20px; overflow-x: auto; }
+.filter-chips::-webkit-scrollbar { display: none; }
+.chip {
+padding: 8px 16px;
+border-radius: 20px;
+border: 1px solid var(--border);
+background: var(--bg-card);
+color: var(--text-muted);
+font-size: 13px;
+font-weight: 600;
+white-space: nowrap;
+cursor: pointer;
+}
+.chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+.library-grid {
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 10px;
+padding: 4px 0;
+}
+.library-item {
+background: var(--bg-card);
+border-radius: 12px;
+padding: 14px 8px;
+text-align: center;
+border: 1px solid var(--border);
+cursor: pointer;
+}
+.library-item:active { opacity: 0.7; }
+.library-item .emoji { font-size: 28px; margin-bottom: 6px; }
+.library-item .name { font-size: 11px; font-weight: 500; line-height: 1.3; }
+.parse-result {
+background: var(--bg-card);
+border-radius: 12px;
+padding: 14px;
+margin-top: 12px;
+border: 1px solid var(--border);
+max-height: 300px;
+overflow-y: auto;
+}
+.parse-section { margin-bottom: 12px; }
+.parse-section h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.parse-item {
+font-size: 13px;
+padding: 6px 0;
+border-bottom: 1px solid var(--border);
+display: flex;
+align-items: center;
+gap: 8px;
+}
+.parse-item:last-child { border-bottom: none; }
+.parse-item .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot-event { background: var(--success); }
+.dot-update { background: var(--primary); }
+.dot-bug { background: var(--danger); }
+.empty-state {
+text-align: center;
+padding: 60px 40px;
+color: var(--text-muted);
+}
+.empty-state .emoji { font-size: 48px; margin-bottom: 16px; }
+.empty-state p { font-size: 14px; line-height: 1.6; }
+.hidden { display: none !important; }
+.color-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.color-option {
+width: 32px; height: 32px;
+border-radius: 50%;
+cursor: pointer;
+border: 3px solid transparent;
+}
+.color-option.selected { border-color: white; }
+.preset-emoji { font-size: 20px; }
+.toast {
+position: fixed;
+bottom: calc(var(--safe-bottom) + 100px);
+left: 50%;
+transform: translateX(-50%) translateY(20px);
+background: var(--bg-card-hover);
+color: white;
+padding: 12px 24px;
+border-radius: 12px;
+font-size: 14px;
+font-weight: 500;
+z-index: 2000;
+opacity: 0;
+transition: all 0.3s;
+pointer-events: none;
+box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<!-- ==================== HOME PAGE ==================== -->
+<div id="home-page">
+<div class="header">
+<div>
+<h1>🎮 游戏待办</h1>
+<div class="subtitle">所有游戏的更新、活动、Bug修复一键转待办</div>
+</div>
+<div class="header-actions">
+<button class="icon-btn" onclick="openLibrary()">➕</button>
+</div>
+</div>
+<div class="stats" id="stats-bar">
+<div class="stat-card">
+<div class="num" id="stat-games" style="color:var(--primary-light)">0</div>
+<div class="label">游戏</div>
+</div>
+<div class="stat-card">
+<div class="num" id="stat-today" style="color:var(--warning)">0</div>
+<div class="label">今日待办</div>
+</div>
+<div class="stat-card">
+<div class="num" id="stat-done" style="color:var(--success)">0</div>
+<div class="label">已完成</div>
+</div>
+</div>
+<div class="search-bar">
+<span class="search-icon">🔍</span>
+<input type="text" id="search-input" placeholder="搜索游戏..." oninput="renderGames()">
+</div>
+<div class="game-list" id="game-list"></div>
+</div>
+<!-- ==================== DETAIL PAGE ==================== -->
+<div id="detail-page" class="hidden">
+<div class="detail-header">
+<button class="back-btn" onclick="goHome()">‹</button>
+<div style="flex:1">
+<div id="detail-game-name" style="font-size:18px;font-weight:700;"></div>
+<div id="detail-game-meta" style="font-size:12px;color:var(--text-muted);"></div>
+</div>
+<button class="icon-btn" onclick="openParseModal()">📋</button>
+<button class="icon-btn" onclick="openCreateTodoModal()">➕</button>
+</div>
+<div class="tabs" style="margin:14px 20px 12px;">
+<div class="tab active" data-tab="todo" onclick="switchTab('todo')">待办</div>
+<div class="tab" data-tab="update" onclick="switchTab('update')">版本更新</div>
+<div class="tab" data-tab="bug" onclick="switchTab('bug')">Bug修复</div>
+</div>
+<div class="filter-chips" id="filter-chips">
+<div class="chip active" data-filter="all" onclick="setFilter('all')">全部</div>
+<div class="chip" data-filter="pending" onclick="setFilter('pending')">待完成</div>
+<div class="chip" data-filter="done" onclick="setFilter('done')">已完成</div>
+<div class="chip" data-filter="overdue" onclick="setFilter('overdue')">已过期</div>
+</div>
+<div id="tab-content" style="padding:0 20px;"></div>
+</div>
+<!-- ==================== MODAL: ADD GAME ==================== -->
+<div class="modal-overlay" id="library-modal" onclick="closeModal(event,'library-modal')">
+<div class="modal" onclick="event.stopPropagation()">
+<div class="modal-handle"></div>
+<div class="modal-title">添加游戏</div>
+<div class="modal-section-title">从游戏库选择</div>
+<div class="library-grid" id="preset-games"></div>
+<div class="modal-section-title">自定义游戏</div>
+<div class="form-group">
+<label>游戏名称</label>
+<input type="text" id="custom-game-name" placeholder="输入游戏名称">
+</div>
+<div class="form-group">
+<label>图标 Emoji</label>
+<input type="text" id="custom-game-icon" placeholder="比如 🎮 🏆 ⚔️" value="🎮">
+</div>
+<div class="form-group">
+<label>主题色</label>
+<div class="color-picker" id="color-picker"></div>
+</div>
+<div class="btn-row">
+<button class="btn btn-ghost" onclick="closeModalDirect('library-modal')">取消</button>
+<button class="btn btn-primary" onclick="addCustomGame()">添加</button>
+</div>
+</div>
+</div>
+<!-- ==================== MODAL: CREATE TODO ==================== -->
+<div class="modal-overlay" id="create-todo-modal" onclick="closeModal(event,'create-todo-modal')">
+<div class="modal" onclick="event.stopPropagation()">
+<div class="modal-handle"></div>
+<div class="modal-title">创建待办</div>
+<div class="form-group">
+<label>标题</label>
+<input type="text" id="todo-title" placeholder="比如：每日委托 ×4">
+</div>
+<div class="form-group">
+<label>分类</label>
+<select id="todo-category">
+<option value="event">活动任务</option>
+<option value="daily">每日任务</option>
+<option value="update">版本更新</option>
+<option value="bug">Bug修复</option>
+<option value="other">其他</option>
+</select>
+</div>
+<div class="form-group">
+<label>循环模式</label>
+<select id="todo-repeat">
+<option value="once">不循环</option>
+<option value="daily">每日循环</option>
+<option value="weekly">每周循环</option>
+</select>
+</div>
+<div class="form-group">
+<label>提醒模式</label>
+<select id="todo-remind">
+<option value="none">不提醒</option>
+<option value="daily">每日提醒</option>
+<option value="before_due">截止前提醒</option>
+</select>
+</div>
+<div class="form-group">
+<label>提醒时间</label>
+<input type="time" id="todo-remind-time" value="20:00">
+</div>
+<div class="form-group">
+<label>开始日期（可选）</label>
+<input type="date" id="todo-start-date">
+</div>
+<div class="form-group">
+<label>截止日期（可选）</label>
+<input type="date" id="todo-end-date">
+</div>
+<div class="btn-row">
+<button class="btn btn-ghost" onclick="closeModalDirect('create-todo-modal')">取消</button>
+<button class="btn btn-primary" onclick="createTodo()">创建</button>
+</div>
+</div>
+</div>
+<!-- ==================== MODAL: PARSE TWEET ==================== -->
+<div class="modal-overlay" id="parse-modal" onclick="closeModal(event,'parse-modal')">
+<div class="modal" onclick="event.stopPropagation()">
+<div class="modal-handle"></div>
+<div class="modal-title">粘贴游戏推文/公告</div>
+<div class="form-group">
+<label>推文内容</label>
+<textarea id="parse-input" placeholder="粘贴游戏公告、活动通知、版本更新内容...&#10;&#10;比如：&#10;5.0版本更新公告&#10;1. 新增角色XX&#10;2. 活动「夏日祭」7月1日-7月15日&#10;3. 修复了副本掉线的问题&#10;4. 每日任务：完成3次委托"></textarea>
+</div>
+<button class="btn btn-primary" onclick="parseTweet()">🔍 AI 解析</button>
+<div class="parse-result hidden" id="parse-result"></div>
+<div class="btn-row">
+<button class="btn btn-ghost" onclick="closeModalDirect('parse-modal')">关闭</button>
+<button class="btn btn-primary hidden" id="parse-confirm-btn" onclick="confirmParse()">确认添加</button>
+</div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="fab" onclick="openLibrary()">＋</div>
+<script>
+// ==================== DATA LAYER ====================
+const STORAGE_KEYS = {
+games: 'gtd_games',
+todos: 'gtd_todos',
+versionUpdates: 'gtd_updates',
+bugFixes: 'gtd_bugs'
+};
+function load(key, def) {
+try {
+const v = localStorage.getItem(key);
+return v ? JSON.parse(v) : def;
+} catch(e) { return def; }
+}
+function save(key, val) {
+localStorage.setItem(key, JSON.stringify(val));
+}
+let state = {
+games: load(STORAGE_KEYS.games, []),
+todos: load(STORAGE_KEYS.todos, []),
+updates: load(STORAGE_KEYS.versionUpdates, []),
+bugs: load(STORAGE_KEYS.bugFixes, []),
+currentGameId: null,
+currentTab: 'todo',
+currentFilter: 'all',
+parseData: null
+};
+const DEFAULT_COLORS = ['#FF7AA2','#4A9EFF','#FFCC00','#22c55e','#f59e0b','#ef4444','#a855f7','#ec4899','#06b6d4','#84cc16'];
+let selectedColor = DEFAULT_COLORS[0];
+const PRESET_GAMES = [
+{name:'原神',icon:'🌸'},{name:'崩坏：星穹铁道',icon:'🚂'},{name:'绝区零',icon:'⚡'},
+{name:'英雄联盟',icon:'⚔️'},{name:'无畏契约',icon:'🎯'},{name:'王者荣耀',icon:'👑'},
+{name:'和平精英',icon:'🔫'},{name:'第五人格',icon:'🎭'},{name:'鸣潮',icon:'🌊'},
+{name:'明日方舟',icon:'🏥'},{name:'碧蓝航线',icon:'⚓'},{name:'FGO',icon:'🗡️'},
+{name:'崩坏3',icon:'🌙'},{name:'梦幻西游',icon:'🐉'},{name:'蛋仔派对',icon:'🥚'},
+{name:'元梦之星',icon:'⭐'},{name:'光遇',icon:'🕊️'},{name:'我的世界',icon:'⛏️'},
+{name:'迷你世界',icon:'🌍'},{name:'金铲铲之战',icon:'🎰'},{name:'DNF手游',icon:'🔥'},
+{name:'三国志战略版',icon:'🏯'},{name:'率土之滨',icon:'🌏'},{name:'阴阳师',icon:'🎴'},
+{name:'恋与深空',icon:'💫'},{name:'光与夜之恋',icon:'🌹'},{name:'明日方舟终末地',icon:'🛸'},
+{name:'黑神话：悟空',icon:'🐵'},{name:'艾尔登法环',icon:'💍'},{name:'塞尔达传说',icon:'🛡️'},
+{name:'宝可梦',icon:'🔴'},{name:'怪物猎人',icon:'🐲'},{name:'FF14',icon:'🌟'},
+{name:'魔兽世界',icon:'🐺'},{name:'CS2',icon:'💣'},{name:'Apex英雄',icon:'🏃'},
+{name:'守望先锋',icon:'🤖'},{name:'彩虹六号',icon:'🏠'},{name:'火箭联盟',icon:'🚀'},
+{name:'堡垒之夜',icon:'🏰'},{name:'GTA Online',icon:'🚗'},{name:'原神云',icon:'☁️'},
+{name:'逆水寒',icon:'❄️'},{name:'永劫无间',icon:'🪁'},{name:'命运2',icon:'🌌'},
+{name:'星际战甲',icon:'🤖'},{name:'暗黑破坏神4',icon:'😈'},{name:'博德之门3',icon:'🐉'},
+{name:'斯普拉遁3',icon:'🦑'},{name:'马里奥赛车',icon:'🏎️'},{name:'动物森友会',icon:'🏝️'},
+{name:'星露谷物语',icon:'🌾'},{name:'泰拉瑞亚',icon:'🌳'},{name:'饥荒',icon:'🔥'},
+{name:'杀戮尖塔',icon:'🗼'},{name:'吸血鬼幸存者',icon:'🧛'},{name:'吸血鬼',icon:'🦇'},
+{name:'荒野大镖客2',icon:'🤠'},{name:'赛博朋克2077',icon:'🏙️'},{name:'极限竞速',icon:'🏁'}
+];
+// ==================== UTILS ====================
+function $(id) { return document.getElementById(id); }
+function getGame(id) { return state.games.find(g => g.id === id); }
+function todayStart() { const d = new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+function todayEnd() { return todayStart() + 86400000 - 1; }
+function showToast(msg) {
+const t = $('toast');
+t.textContent = msg;
+t.classList.add('show');
+setTimeout(() => t.classList.remove('show'), 2000);
+}
+function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2,5); }
+// ==================== HOME PAGE ====================
+function renderGames() {
+const query = $('search-input').value.trim().toLowerCase();
+const list = $('game-list');
+let games = state.games;
+if (query) {
+games = games.filter(g => g.name.toLowerCase().includes(query));
+}
+if (games.length === 0) {
+list.innerHTML = `
+<div class="empty-state">
+<div class="emoji">🎮</div>
+<p>${query ? '没有找到匹配的游戏' : '还没有添加游戏<br>点击右下角 + 添加你的第一个游戏'}</p>
+</div>`;
+return;
+}
+list.innerHTML = games.map(g => {
+const gameTodos = state.todos.filter(t => t.gameId === g.id);
+const pending = gameTodos.filter(t => !isDoneToday(t)).length;
+return `
+<div class="game-card" onclick="openGame('${g.id}')">
+<div class="game-icon" style="background:${g.color || '#6366f1'}22;">
+<span style="font-size:26px">${g.icon || '🎮'}</span>
+</div>
+<div class="game-info">
+<div class="game-name">${g.name}</div>
+<div class="game-meta">${gameTodos.length} 条待办${pending > 0 ? ` · ${pending} 条待完成` : ''}</div>
+</div>
+<div class="game-arrow">›</div>
+</div>`;
+}).join('');
+}
+function updateStats() {
+$('stat-games').textContent = state.games.length;
+const today = todayStart();
+const tomorrow = today + 86400000;
+const todayTodos = state.todos.filter(t => {
+if (t.repeatMode === 'daily') return true;
+if (t.repeatMode === 'weekly') return new Date().getDay() === new Date(t.createdAt).getDay() || true;
+return (!t.startDate || t.startDate <= tomorrow) && (!t.endDate || t.endDate >= today);
+});
+$('stat-today').textContent = todayTodos.length;
+$('stat-done').textContent = state.todos.filter(t => isDoneToday(t)).length;
+}
+function isDoneToday(todo) {
+const key = 'done_' + todayStart();
+return (todo.doneDates || []).includes(key);
+}
+// ==================== GAME DETAIL ====================
+function openGame(id) {
+state.currentGameId = id;
+state.currentTab = 'todo';
+state.currentFilter = 'all';
+$('home-page').classList.add('hidden');
+$('detail-page').classList.remove('hidden');
+const g = getGame(id);
+$('detail-game-name').textContent = g.icon + ' ' + g.name;
+$('detail-game-meta').textContent = `${state.todos.filter(t=>t.gameId===id).length} 条待办`;
+switchTab('todo');
+}
+function goHome() {
+$('detail-page').classList.add('hidden');
+$('home-page').classList.remove('hidden');
+renderGames();
+updateStats();
+}
+function switchTab(tab) {
+state.currentTab = tab;
+document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+$('filter-chips').style.display = tab === 'todo' ? 'flex' : 'none';
+renderTabContent();
+}
+function setFilter(f) {
+state.currentFilter = f;
+document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+renderTabContent();
+}
+function renderTabContent() {
+const content = $('tab-content');
+const gameId = state.currentGameId;
+if (!gameId) return;
+if (state.currentTab === 'todo') {
+let todos = state.todos.filter(t => t.gameId === gameId);
+const today = todayStart();
+const tomorrow = today + 86400000;
+todos = todos.filter(t => {
+if (t.repeatMode === 'daily') return true;
+if (t.repeatMode === 'weekly') return true;
+if (t.startDate && t.startDate > tomorrow) return false;
+if (t.endDate && t.endDate < today && state.currentFilter !== 'overdue') return false;
+return true;
+});
+if (state.currentFilter === 'done') todos = todos.filter(isDoneToday);
+else if (state.currentFilter === 'pending') todos = todos.filter(t => !isDoneToday(t));
+else if (state.currentFilter === 'overdue') {
+todos = todos.filter(t => t.endDate && t.endDate < today && !isDoneToday(t));
+}
+if (todos.length === 0) {
+content.innerHTML = `<div class="empty-state"><div class="emoji">✅</div><p>暂无待办事项<br>点击右上角 + 创建</p></div>`;
+return;
+}
+content.innerHTML = todos.map(t => {
+const done = isDoneToday(t);
+const overdue = t.endDate && t.endDate < todayStart() && !done;
+return `
+<div class="todo-item">
+<div class="todo-check ${done?'done':''}" onclick="toggleTodo('${t.id}')"></div>
+<div class="todo-content">
+<div class="todo-title ${done?'done':''}">${t.title}</div>
+<div class="todo-tags">
+${t.repeatMode !== 'once' ? `<span class="tag tag-${t.repeatMode}">${t.repeatMode==='daily'?'每日':t.repeatMode==='weekly'?'每周':'一次'}</span>` : ''}
+${t.remindMode !== 'none' ? `<span class="tag tag-remind">🔔 ${t.remindMode==='daily'?'每日':t.remindMode==='before_due'?'截止前':'不'}提醒</span>` : ''}
+${t.endDate ? `<span class="tag tag-once">截止 ${new Date(t.endDate).toLocaleDateString('zh-CN',{month:'short',day:'numeric'})}</span>` : ''}
+${overdue ? `<span class="tag tag-once">已过期</span>` : ''}
+</div>
+</div>
+<div class="todo-delete" onclick="deleteTodo('${t.id}')">🗑</div>
+</div>`;
+}).join('');
+} else if (state.currentTab === 'update') {
+const updates = state.updates.filter(u => u.gameId === gameId);
+if (updates.length === 0) {
+content.innerHTML = `<div class="empty-state"><div class="emoji">📦</div><p>暂无版本更新记录<br>粘贴推文自动提取</p></div>`;
+return;
+}
+content.innerHTML = updates.map(u => `
+<div class="todo-item" style="flex-direction:column;align-items:stretch;gap:8px;">
+<div style="font-size:12px;color:var(--text-muted);">${new Date(u.timestamp).toLocaleDateString('zh-CN')}</div>
+<div>${u.content.split('\n').map(line => `<div style="font-size:14px;padding:3px 0;">${line}</div>`).join('')}</div>
+<div class="todo-delete" style="align-self:flex-end;" onclick="deleteUpdate('${u.id}')">🗑</div>
+</div>`).join('');
+} else if (state.currentTab === 'bug') {
+const bugs = state.bugs.filter(b => b.gameId === gameId);
+if (bugs.length === 0) {
+content.innerHTML = `<div class="empty-state"><div class="emoji">🐛</div><p>暂无Bug修复记录</p></div>`;
+return;
+}
+content.innerHTML = bugs.map(b => `
+<div class="todo-item" style="flex-direction:column;align-items:stretch;gap:8px;">
+<div style="font-size:12px;color:var(--text-muted);">${new Date(b.timestamp).toLocaleDateString('zh-CN')}</div>
+<div>${b.content.split('\n').map(line => `<div style="font-size:14px;padding:3px 0;">${line}</div>`).join('')}</div>
+<div class="todo-delete" style="align-self:flex-end;" onclick="deleteBug('${b.id}')">🗑</div>
+</div>`).join('');
+}
+}
+// ==================== TODO ACTIONS ====================
+function toggleTodo(id) {
+const todo = state.todos.find(t => t.id === id);
+if (!todo) return;
+const key = 'done_' + todayStart();
+if (!todo.doneDates) todo.doneDates = [];
+const idx = todo.doneDates.indexOf(key);
+if (idx >= 0) todo.doneDates.splice(idx, 1);
+else todo.doneDates.push(key);
+save(STORAGE_KEYS.todos, state.todos);
+renderTabContent();
+updateStats();
+}
+function deleteTodo(id) {
+state.todos = state.todos.filter(t => t.id !== id);
+save(STORAGE_KEYS.todos, state.todos);
+renderTabContent();
+showToast('已删除');
+}
+function deleteUpdate(id) {
+state.updates = state.updates.filter(u => u.id !== id);
+save(STORAGE_KEYS.versionUpdates, state.updates);
+renderTabContent();
+showToast('已删除');
+}
+function deleteBug(id) {
+state.bugs = state.bugs.filter(b => b.id !== id);
+save(STORAGE_KEYS.bugFixes, state.bugs);
+renderTabContent();
+showToast('已删除');
+}
+// ==================== MODAL: ADD GAME ====================
+function openLibrary() {
+// Render preset games
+$('preset-games').innerHTML = PRESET_GAMES.map((g,i) => `
+<div class="library-item" onclick="addPresetGame('${g.name}','${g.icon}')">
+<div class="emoji">${g.icon}</div>
+<div class="name">${g.name}</div>
+</div>`).join('');
+// Render color picker
+$('color-picker').innerHTML = DEFAULT_COLORS.map((c,i) => `
+<div class="color-option ${i===0?'selected':''}" style="background:${c}" onclick="selectColor('${c}',this)"></div>`).join('');
+selectedColor = DEFAULT_COLORS[0];
+$('library-modal').classList.add('active');
+}
+function selectColor(color, el) {
+selectedColor = color;
+document.querySelectorAll('.color-option').forEach(c => c.classList.remove('selected'));
+el.classList.add('selected');
+}
+function addPresetGame(name, icon) {
+if (state.games.find(g => g.name === name)) {
+showToast('游戏已存在');
+return;
+}
+state.games.push({
+id: genId(), name, icon, color: selectedColor,
+isCustom: false, createdAt: Date.now()
+});
+save(STORAGE_KEYS.games, state.games);
+closeModalDirect('library-modal');
+showToast(`已添加 ${name}`);
+renderGames();
+updateStats();
+}
+function addCustomGame() {
+const name = $('custom-game-name').value.trim();
+const icon = $('custom-game-icon').value.trim() || '🎮';
+if (!name) { showToast('请输入游戏名称'); return; }
+if (state.games.find(g => g.name === name)) { showToast('游戏已存在'); return; }
+state.games.push({
+id: genId(), name, icon, color: selectedColor,
+isCustom: true, createdAt: Date.now()
+});
+save(STORAGE_KEYS.games, state.games);
+$('custom-game-name').value = '';
+closeModalDirect('library-modal');
+showToast(`已添加 ${name}`);
+renderGames();
+updateStats();
+}
+// ==================== MODAL: CREATE TODO ====================
+function openCreateTodoModal() {
+['todo-title','todo-start-date','todo-end-date'].forEach(id => $(id).value = '');
+$('todo-repeat').value = 'daily';
+$('todo-remind').value = 'daily';
+$('todo-remind-time').value = '20:00';
+$('create-todo-modal').classList.add('active');
+}
+function createTodo() {
+const title = $('todo-title').value.trim();
+if (!title) { showToast('请输入待办标题'); return; }
+const todo = {
+id: genId(),
+gameId: state.currentGameId,
+title,
+category: $('todo-category').value,
+repeatMode: $('todo-repeat').value,
+remindMode: $('todo-remind').value,
+remindTime: $('todo-remind-time').value,
+startDate: $('todo-start-date').value ? new Date($('todo-start-date').value).getTime() : null,
+endDate: $('todo-end-date').value ? new Date($('todo-end-date').value).getTime() : null,
+doneDates: [],
+createdAt: Date.now()
+};
+state.todos.push(todo);
+save(STORAGE_KEYS.todos, state.todos);
+$('todo-title').value = '';
+closeModalDirect('create-todo-modal');
+showToast('待办已创建');
+switchTab('todo');
+}
+// ==================== MODAL: PARSE TWEET ====================
+function openParseModal() {
+$('parse-input').value = '';
+$('parse-result').classList.add('hidden');
+$('parse-result').innerHTML = '';
+$('parse-confirm-btn').classList.add('hidden');
+state.parseData = null;
+$('parse-modal').classList.add('active');
+}
+function parseTweet() {
+const text = $('parse-input').value.trim();
+if (!text) { showToast('请粘贴推文内容'); return; }
+// Simple parser: split by lines, categorize
+const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+const events = [], updates = [], bugs = [];
+const eventKeywords = ['活动','签到','每日','每周','奖励','兑换码','福利','赠送','登录','参与','限时','打卡','挑战'];
+const updateKeywords = ['更新','版本','新增','优化','改进','上线','开放','加入','调整','升级','调整','维护','更新','内容','系统'];
+const bugKeywords = ['修复','解决','bug','问题','错误','崩溃','闪退','异常','修正','patch','hotfix','fixed','fix'];
+lines.forEach(line => {
+const lower = line.toLowerCase();
+if (bugKeywords.some(k => lower.includes(k))) bugs.push(line);
+else if (eventKeywords.some(k => lower.includes(k))) events.push(line);
+else if (updateKeywords.some(k => lower.includes(k))) updates.push(line);
+else events.push(line); // default to event
+});
+state.parseData = { events, updates, bugs };
+let html = '';
+if (events.length) {
+html += `<div class="parse-section"><h4 style="color:var(--success)">📋 活动/任务 (${events.length})</h4>`;
+events.forEach(e => html += `<div class="parse-item"><div class="dot dot-event"></div>${escapeHtml(e)}</div>`);
+html += `</div>`;
+}
+if (updates.length) {
+html += `<div class="parse-section"><h4 style="color:var(--primary-light)">📦 版本更新 (${updates.length})</h4>`;
+updates.forEach(u => html += `<div class="parse-item"><div class="dot dot-update"></div>${escapeHtml(u)}</div>`);
+html += `</div>`;
+}
+if (bugs.length) {
+html += `<div class="parse-section"><h4 style="color:var(--danger)">🐛 Bug修复 (${bugs.length})</h4>`;
+bugs.forEach(b => html += `<div class="parse-item"><div class="dot dot-bug"></div>${escapeHtml(b)}</div>`);
+html += `</div>`;
+}
+if (!html) {
+html = '<div class="empty-state"><p>未能识别内容，请手动创建待办</p></div>';
+}
+$('parse-result').innerHTML = html;
+$('parse-result').classList.remove('hidden');
+$('parse-confirm-btn').classList.toggle('hidden', events.length === 0 && updates.length === 0 && bugs.length === 0);
+}
+function escapeHtml(str) {
+return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function confirmParse() {
+if (!state.parseData || !state.currentGameId) return;
+const { events, updates, bugs } = state.parseData;
+// Add events as todos
+events.forEach(e => {
+// Try to detect if it's a daily task
+const isDaily = /每日|每天|daily/i.test(e);
+state.todos.push({
+id: genId(),
+gameId: state.currentGameId,
+title: e.replace(/^[0-9]+[.、)]\s*/, '').substring(0, 50),
+category: isDaily ? 'daily' : 'event',
+repeatMode: isDaily ? 'daily' : 'once',
+remindMode: isDaily ? 'daily' : 'none',
+remindTime: '20:00',
+startDate: null,
+endDate: null,
+doneDates: [],
+createdAt: Date.now()
+});
+});
+// Add updates
+if (updates.length) {
+state.updates.push({
+id: genId(),
+gameId: state.currentGameId,
+content: updates.join('\n'),
+timestamp: Date.now()
+});
+}
+// Add bugs
+if (bugs.length) {
+state.bugs.push({
+id: genId(),
+gameId: state.currentGameId,
+content: bugs.join('\n'),
+timestamp: Date.now()
+});
+}
+save(STORAGE_KEYS.todos, state.todos);
+save(STORAGE_KEYS.versionUpdates, state.updates);
+save(STORAGE_KEYS.bugFixes, state.bugs);
+const total = events.length + updates.length + bugs.length;
+closeModalDirect('parse-modal');
+showToast(`已添加 ${total} 条内容`);
+switchTab('todo');
+}
+// ==================== MODAL HELPERS ====================
+function closeModal(event, id) {
+if (event.target.classList.contains('modal-overlay')) {
+$(id).classList.remove('active');
+}
+}
+function closeModalDirect(id) {
+$(id).classList.remove('active');
+}
+// ==================== NOTIFICATIONS ====================
+function scheduleNotification(todo) {
+if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+if (Notification.permission !== 'granted') {
+Notification.requestPermission();
+return;
+}
+const [h, m] = (todo.remindTime || '20:00').split(':').map(Number);
+const now = new Date();
+const target = new Date();
+target.setHours(h, m, 0, 0);
+if (target <= now) target.setDate(target.getDate() + 1);
+const delay = target - now;
+setTimeout(() => {
+new Notification('🎮 游戏待办提醒', {
+body: todo.title,
+icon: '🎮',
+tag: todo.id
+});
+// Re-schedule for daily
+if (todo.repeatMode === 'daily') scheduleNotification(todo);
+}, delay);
+}
+// ==================== INIT ====================
+function init() {
+// Request notification permission
+if ('Notification' in window && Notification.permission === 'default') {
+Notification.requestPermission();
+}
+// Init default games if empty
+if (state.games.length === 0) {
+const defaults = [
+{id: genId(), name: '原神', icon: '🌸', color: '#FF7AA2', isCustom: false, createdAt: Date.now()},
+{id: genId(), name: '崩坏：星穹铁道', icon: '🚂', color: '#4A9EFF', isCustom: false, createdAt: Date.now()},
+{id: genId(), name: '绝区零', icon: '⚡', color: '#FFCC00', isCustom: false, createdAt: Date.now()}
+];
+state.games = defaults;
+save(STORAGE_KEYS.games, state.games);
+}
+renderGames();
+updateStats();
+// Schedule reminders for existing daily todos
+state.todos.filter(t => t.remindMode === 'daily').forEach(scheduleNotification);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
